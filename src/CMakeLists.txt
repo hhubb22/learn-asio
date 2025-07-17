@@ -11,5 +11,5 @@ set_target_properties(echo_server PROPERTIES
 target_link_libraries(echo_server PRIVATE 
     fmt::fmt
     spdlog::spdlog
-    asio::asio
+    boost::boost
 )

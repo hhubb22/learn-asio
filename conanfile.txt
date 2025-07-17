@@ -1,7 +1,7 @@
 [requires]
 fmt/11.2.0
 spdlog/1.15.3
-asio/1.34.2
+boost/1.88.0
 
 [generators]
 CMakeDeps

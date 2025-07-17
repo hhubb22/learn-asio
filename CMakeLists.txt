@@ -35,7 +35,7 @@ list(APPEND CMAKE_PREFIX_PATH ${CMAKE_BINARY_DIR})
 # 查找依赖包
 find_package(fmt REQUIRED)
 find_package(spdlog REQUIRED)
-find_package(asio REQUIRED)
+find_package(Boost)
 
 # 添加源码目录
 add_subdirectory(src)
