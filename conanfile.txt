@@ -1,0 +1,8 @@
+[requires]
+fmt/11.2.0
+spdlog/1.15.3
+asio/1.34.2
+
+[generators]
+CMakeDeps
+CMakeToolchain
