@@ -20,6 +20,9 @@ awaitable<void> listener(tcp::acceptor acceptor) {
   auto ex = co_await boost::asio::this_coro::executor;
   for (;;) {
     auto sock = co_await acceptor.async_accept(boost::asio::use_awaitable);
+    auto ep = sock.remote_endpoint();
+    spdlog::info("Accepted connection from {}:{}", ep.address().to_string(),
+                 ep.port());
     auto per_session_strand = boost::asio::make_strand(ex);
 
     co_spawn(per_session_strand, session(std::move(sock)),
@@ -28,40 +31,46 @@ awaitable<void> listener(tcp::acceptor acceptor) {
 }
 
 awaitable<void> session(tcp::socket sock) {
+  auto endpoint = sock.remote_endpoint();
+  auto endpoint_addr = endpoint.address().to_string();
+  auto endpoint_port = endpoint.port();
   std::array<char, SESSION_BUFFER_SIZE> buf{};
   error_code ec;
 
   for (;;) {
-    spdlog::info("read from client");
+    spdlog::debug("Waiting for data from {}:{}", endpoint_addr, endpoint_port);
     size_t n = co_await sock.async_read_some(
         boost::asio::buffer(buf, SESSION_BUFFER_SIZE),
         boost::asio::redirect_error(boost::asio::use_awaitable, ec));
     if (ec == boost::asio::error::eof) {
-      spdlog::info("peer closed connection");
+      spdlog::info("Connection {}:{} closed by peer", endpoint_addr,
+                   endpoint_port);
       co_return;
     } else if (ec) {
-      spdlog::error("read error: {}", ec.message());
+      spdlog::error("Read error from {}:{}: {}", endpoint_addr, endpoint_port,
+                    ec.message());
     }
-    spdlog::info("read {} bytes", n);
+    spdlog::debug("Read {} bytes from {}:{}", n, endpoint_addr, endpoint_port);
 
-    spdlog::info("write back");
+    spdlog::debug("Echoing {} bytes to {}:{}", n, endpoint_addr, endpoint_port);
     co_await boost::asio::async_write(
         sock, boost::asio::buffer(buf, n),
         boost::asio::redirect_error(boost::asio::use_awaitable, ec));
     if (ec) {
-      spdlog::error("write error: {}", ec.message());
+      spdlog::error("Write error to {}:{}: {}", endpoint_addr, endpoint_port,
+                    ec.message());
     }
   }
 }
 
 int main() {
-  spdlog::info("initial the io context");
+  spdlog::info("Initializing I/O context");
   boost::asio::io_context io;
 
-  spdlog::info("initial listener");
+  spdlog::info("Starting listener on port {}", 12345);
   tcp::acceptor acceptor{io, tcp::endpoint{tcp::v4(), 12345}};
 
-  spdlog::info("start listenning...");
+  spdlog::info("Server listening...");
   co_spawn(io, listener(std::move(acceptor)), boost::asio::detached);
 
   io.run();
